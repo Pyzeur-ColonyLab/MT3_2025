@@ -93,7 +93,7 @@ class MT3Inference:
         self.decoder = MT3TokenDecoder(num_velocity_bins=num_velocity_bins)
 
         print(f"✅ MT3 Inference initialized on {device}")
-        print(f"   Model: {load_result['parameters_loaded']:,} parameters loaded")
+        print(f"   Model: {load_result['parameter_count']:,} parameters loaded")
         print(f"   Vocab size: {self.decoder.get_vocab_size()}")
 
     def transcribe(

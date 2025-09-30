@@ -197,8 +197,16 @@ class T5XToPyTorchConverter:
         if converted_count > 10:
             print(f"  ... et {converted_count - 10} autres")
 
-        if skipped and len(skipped) > 3:
+        if skipped:
             print(f"\n⚠️  {len(skipped)} paramètres ignorés")
+            # Log skipped layer norm parameters for diagnosis
+            norm_skipped = [s for s in skipped if 'norm' in s[0].lower() or 'scale' in s[0].lower()]
+            if norm_skipped:
+                print(f"\n🔍 Paramètres layer_norm ignorés (à vérifier):")
+                for name, reason in norm_skipped[:10]:
+                    print(f"  - {name}")
+                if len(norm_skipped) > 10:
+                    print(f"  ... et {len(norm_skipped) - 10} autres")
 
         print(f"\n✅ {converted_count} paramètres convertis")
         return pytorch_state
@@ -209,8 +217,12 @@ class T5XToPyTorchConverter:
         # Embeddings spéciaux
         if name == 'decoder.token_embedder.embedding':
             return 'decoder.embed_tokens.weight'
+
+        # Note: encoder.continuous_inputs_projection is not used in current MT3Model
+        # Audio features are processed through the preprocessor before embedding
         if name == 'encoder.continuous_inputs_projection.kernel':
-            return 'encoder.input_projection.weight'
+            return None  # Skip - not present in PyTorch MT3Model
+
         if name == 'decoder.logits_dense.kernel':
             return 'decoder.lm_head.weight'
 
@@ -253,9 +265,19 @@ class T5XToPyTorchConverter:
                 return f'encoder.block.{layer_num}.layer.1.DenseReluDense.wo.weight'
 
         # Layer norms (T5X uses .scale for RMSNorm weight)
-        elif 'pre_attention_layer_norm.scale' in name or 'layer_norm.scale' in name:
+        # Try multiple possible patterns
+        elif any(pattern in name for pattern in [
+            'pre_attention_layer_norm.scale',
+            'pre_attention_layer_norm',
+            'layer_norm.scale',
+        ]):
             return f'encoder.block.{layer_num}.layer.0.layer_norm.weight'
-        elif 'pre_mlp_layer_norm.scale' in name or 'final_layer_norm.scale' in name:
+        elif any(pattern in name for pattern in [
+            'pre_mlp_layer_norm.scale',
+            'pre_mlp_layer_norm',
+            'final_layer_norm.scale',
+            'final_layer_norm',
+        ]):
             return f'encoder.block.{layer_num}.layer.1.layer_norm.weight'
 
         return None
@@ -302,11 +324,24 @@ class T5XToPyTorchConverter:
 
         # Layer norms (T5X uses .scale for RMSNorm weight)
         # decoder has 3 layer norms per block (self-attn, cross-attn, ffn)
-        elif 'pre_self_attention_layer_norm.scale' in name:
+        # Try multiple possible patterns
+        elif any(pattern in name for pattern in [
+            'pre_self_attention_layer_norm.scale',
+            'pre_self_attention_layer_norm',
+        ]):
             return f'decoder.block.{layer_num}.layer.0.layer_norm.weight'
-        elif 'pre_cross_attention_layer_norm.scale' in name:
+        elif any(pattern in name for pattern in [
+            'pre_cross_attention_layer_norm.scale',
+            'pre_cross_attention_layer_norm',
+            'encoder_decoder_attention_layer_norm',
+        ]):
             return f'decoder.block.{layer_num}.layer.1.layer_norm.weight'
-        elif 'pre_mlp_layer_norm.scale' in name or 'final_layer_norm.scale' in name:
+        elif any(pattern in name for pattern in [
+            'pre_mlp_layer_norm.scale',
+            'pre_mlp_layer_norm',
+            'final_layer_norm.scale',
+            'final_layer_norm',
+        ]):
             return f'decoder.block.{layer_num}.layer.2.layer_norm.weight'
 
         return None
