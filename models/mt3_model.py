@@ -43,7 +43,7 @@ class MT3Config:
     num_decoder_layers: int = 8
     num_heads: int = 8
     d_ff: int = 1024
-    d_kv: int = 64  # d_model // num_heads = 512 // 8 = 64
+    d_kv: int = 48  # MT3 uses 48 (inner_dim 384 = 8 heads × 48)
 
     # Training parameters
     dropout_rate: float = 0.1
@@ -63,11 +63,11 @@ class MT3Config:
 
     def __post_init__(self):
         """Validate configuration parameters."""
-        if self.d_model % self.num_heads != 0:
-            raise ValueError(f"d_model ({self.d_model}) must be divisible by num_heads ({self.num_heads})")
-
-        if self.d_kv != self.d_model // self.num_heads:
-            warnings.warn(f"d_kv ({self.d_kv}) should equal d_model//num_heads ({self.d_model//self.num_heads})")
+        # Note: For MT3, d_kv (48) is intentionally different from d_model//num_heads (64)
+        # This is part of the original MT3 architecture design
+        expected_inner_dim = self.num_heads * self.d_kv
+        if expected_inner_dim != 384:
+            warnings.warn(f"inner_dim ({expected_inner_dim}) differs from MT3 standard (384 = 8 × 48)")
 
 
 class RMSNorm(nn.Module):
