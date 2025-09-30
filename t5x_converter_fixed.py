@@ -173,12 +173,16 @@ class T5XToPyTorchConverter:
                 # Convertir en numpy float32
                 weight_np = np.array(weight, dtype=np.float32)
 
-                # Transposer les matrices linéaires (sauf embeddings)
-                # T5X: (in_features, out_features)
-                # PyTorch: (out_features, in_features)
+                # Transposer toutes les matrices 2D
+                # T5X format:
+                #   - Linear layers: (in_features, out_features)
+                #   - Embeddings: (d_model, vocab_size)
+                # PyTorch format:
+                #   - Linear layers: (out_features, in_features)
+                #   - Embeddings: (vocab_size, d_model)
+                # Both need transpose!
                 if '.weight' in pytorch_name and len(weight_np.shape) == 2:
-                    if not 'embed_tokens' in pytorch_name:  # Ne pas transposer les embeddings
-                        weight_np = weight_np.T
+                    weight_np = weight_np.T
 
                 # Convertir en tensor PyTorch
                 pytorch_state[pytorch_name] = torch.from_numpy(weight_np)
@@ -225,11 +229,18 @@ class T5XToPyTorchConverter:
         print("\n🔧 Initialisation des paramètres manquants...")
 
         # Detect d_model from existing parameters
+        # shared.weight shape is (vocab_size, d_model) after transpose
         if 'shared.weight' in pytorch_state:
-            d_model = pytorch_state['shared.weight'].shape[1]
             vocab_size = pytorch_state['shared.weight'].shape[0]
+            d_model = pytorch_state['shared.weight'].shape[1]
         else:
-            d_model = 512  # default
+            # Try to detect from attention weights (out_features, in_features after transpose)
+            attn_keys = [k for k in pytorch_state.keys() if 'SelfAttention.q.weight' in k]
+            if attn_keys:
+                # Attention weights are (inner_dim, d_model) = (384, 512)
+                d_model = pytorch_state[attn_keys[0]].shape[1]
+            else:
+                d_model = 512  # default
             vocab_size = 1536  # default
 
         # Detect number of layers from converted parameters
