@@ -2,29 +2,49 @@
 
 Complete guide to download and convert the MT3 checkpoint on your Brev NVIDIA instance.
 
-## 🚀 Quick Start (Automated)
+## 🚀 Quick Start
 
-The easiest way to get the MT3 checkpoint is using our automated setup script:
+### Option A: Automated Setup (Try First)
 
 ```bash
-# Make the script executable
-chmod +x setup_mt3_checkpoint.sh
-
-# Run the setup
+# Method 1: Main setup script
 bash setup_mt3_checkpoint.sh
 ```
 
-This script will:
-1. ✅ Check for existing checkpoint
-2. ✅ Install required dependencies (zarr, gsutil)
-3. ✅ Download T5X checkpoint from Google Cloud (~200-500 MB)
-4. ✅ Convert to PyTorch format
-5. ✅ Verify the conversion
+**If this fails (common due to gsutil authentication)**, try:
+
+```bash
+# Method 2: Python-based alternative (tries multiple sources)
+python3 quick_setup.py
+
+# Method 3: Alternative bash script
+bash download_checkpoint_alternative.sh
+```
+
+### Option B: Manual Download (If automated fails)
+
+See the detailed **[MANUAL_CHECKPOINT_DOWNLOAD.md](MANUAL_CHECKPOINT_DOWNLOAD.md)** guide.
+
+Quick summary:
+1. **Pre-converted checkpoint**: Check https://github.com/kunato/mt3-pytorch/releases
+2. **Setup gcloud**: Follow authentication steps in manual guide
+3. **Alternative sources**: Hugging Face, direct HTTP download
+
+---
+
+## 📦 What You'll Get
 
 **Expected output files:**
 - `mt3_converted.pth` (~183 MB) - PyTorch checkpoint
 - `config.json` - Model configuration
 - `parameter_mapping.txt` - Parameter list (for debugging)
+
+**Setup process:**
+1. ✅ Check for existing checkpoint
+2. ✅ Install required dependencies (zarr, numcodecs)
+3. ✅ Download T5X checkpoint from Google Cloud (~200-500 MB)
+4. ✅ Convert to PyTorch format
+5. ✅ Verify the conversion
 
 ---
 
