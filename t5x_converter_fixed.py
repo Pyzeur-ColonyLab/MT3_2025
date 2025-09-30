@@ -209,6 +209,77 @@ class T5XToPyTorchConverter:
                     print(f"  ... et {len(norm_skipped) - 10} autres")
 
         print(f"\n✅ {converted_count} paramètres convertis")
+
+        # Add missing layer norms (not present in T5X checkpoint)
+        pytorch_state = self._add_missing_layer_norms(pytorch_state)
+
+        return pytorch_state
+
+    def _add_missing_layer_norms(self, pytorch_state):
+        """
+        Initialize missing layer norm parameters with default values.
+        T5X checkpoints often don't include layer norm parameters - they're initialized to ones.
+        """
+        print("\n🔧 Initialisation des layer norms manquants...")
+
+        # Detect d_model from existing parameters
+        if 'decoder.embed_tokens.weight' in pytorch_state:
+            d_model = pytorch_state['decoder.embed_tokens.weight'].shape[1]
+        else:
+            d_model = 512  # default
+
+        # Detect number of layers from converted parameters
+        encoder_layers = len([k for k in pytorch_state.keys() if k.startswith('encoder.block.')])
+        decoder_layers = len([k for k in pytorch_state.keys() if k.startswith('decoder.block.')])
+
+        # Count unique encoder blocks
+        encoder_blocks = set()
+        for k in pytorch_state.keys():
+            if k.startswith('encoder.block.'):
+                block_num = k.split('.')[2]
+                encoder_blocks.add(int(block_num))
+        num_encoder_blocks = len(encoder_blocks) if encoder_blocks else 0
+
+        # Count unique decoder blocks
+        decoder_blocks = set()
+        for k in pytorch_state.keys():
+            if k.startswith('decoder.block.'):
+                block_num = k.split('.')[2]
+                decoder_blocks.add(int(block_num))
+        num_decoder_blocks = len(decoder_blocks) if decoder_blocks else 0
+
+        added_count = 0
+
+        # Add encoder layer norms (2 per block)
+        for i in range(num_encoder_blocks):
+            for layer_idx in [0, 1]:
+                key = f'encoder.block.{i}.layer.{layer_idx}.layer_norm.weight'
+                if key not in pytorch_state:
+                    pytorch_state[key] = torch.ones(d_model, dtype=torch.float32)
+                    added_count += 1
+
+        # Add decoder layer norms (3 per block)
+        for i in range(num_decoder_blocks):
+            for layer_idx in [0, 1, 2]:
+                key = f'decoder.block.{i}.layer.{layer_idx}.layer_norm.weight'
+                if key not in pytorch_state:
+                    pytorch_state[key] = torch.ones(d_model, dtype=torch.float32)
+                    added_count += 1
+
+        # Add final layer norms for encoder and decoder stacks
+        final_norms = [
+            'encoder.final_layer_norm.weight',
+            'decoder.final_layer_norm.weight'
+        ]
+        for key in final_norms:
+            if key not in pytorch_state:
+                pytorch_state[key] = torch.ones(d_model, dtype=torch.float32)
+                added_count += 1
+
+        if added_count > 0:
+            print(f"✅ {added_count} layer_norm.weight initialisés à ones()")
+            print(f"   (RMSNorm standard: scale parameters = 1.0)")
+
         return pytorch_state
 
     def _convert_parameter_name(self, name):
