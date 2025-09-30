@@ -12,6 +12,7 @@ soundfile>=0.10.0
 note-seq>=0.0.5
 pretty-midi>=0.2.9
 absl-py>=1.0.0
+t5>=0.9.0  # Required for MT3 vocabulary system
 
 # Utilities
 tqdm>=4.50.0
