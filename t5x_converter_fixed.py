@@ -151,91 +151,165 @@ class T5XToPyTorchConverter:
         return params if params else None
     
     def map_t5x_to_pytorch(self, t5x_weights):
-        """Mappe les noms T5X vers PyTorch"""
-        print("\n🔄 Conversion des noms de paramètres...")
-        
+        """Mappe les noms T5X vers PyTorch avec structure T5 standard"""
+        print("\n🔄 Conversion des noms de paramètres (T5 standard)...")
+
         pytorch_state = OrderedDict()
-        
-        # Mapping des noms T5X → PyTorch
-        name_mappings = [
-            # Retirer le préfixe target.
-            ('target.', ''),
-            
-            # Structure des couches
-            ('encoder.layers_', 'encoder.layer.'),
-            ('decoder.layers_', 'decoder.layer.'),
-            
-            # Attention
-            ('self_attention.', 'self_attn.'),
-            ('encoder_decoder_attention.', 'cross_attn.'),
-            ('.attention.', '.attn.'),
-            
-            # Projections d'attention
-            ('query.kernel', 'q_proj.weight'),
-            ('key.kernel', 'k_proj.weight'),
-            ('value.kernel', 'v_proj.weight'),
-            ('out.kernel', 'out_proj.weight'),
-            
-            # FFN/MLP
-            ('mlp.wi_0.kernel', 'ffn.fc1.weight'),
-            ('mlp.wi_1.kernel', 'ffn.fc2.weight'),
-            ('mlp.wo.kernel', 'ffn.fc_out.weight'),
-            
-            # Embeddings
-            ('token_embedder.embedding', 'embed_tokens.weight'),
-            ('continuous_inputs_projection.kernel', 'input_projection.weight'),
-            ('logits_dense.kernel', 'lm_head.weight'),
-            
-            # Layer norm
-            ('.layer_norm.scale', '.norm.weight'),
-            ('.final_layer_norm.scale', '.final_norm.weight'),
-            
-            # Fallback pour kernel → weight
-            ('.kernel', '.weight'),
-            ('.scale', '.weight'),
-        ]
-        
         converted_count = 0
         skipped = []
-        
+
         for t5x_name, weight in t5x_weights.items():
-            # Appliquer les mappings
-            pytorch_name = t5x_name
-            for t5x_pattern, pt_pattern in name_mappings:
-                pytorch_name = pytorch_name.replace(t5x_pattern, pt_pattern)
-            
+            # Retirer le préfixe target.
+            name = t5x_name.replace('target.', '')
+
+            # Convertir le nom T5X vers la structure T5 PyTorch
+            pytorch_name = self._convert_parameter_name(name)
+
+            if pytorch_name is None:
+                skipped.append((t5x_name, "Unknown parameter pattern"))
+                continue
+
             try:
                 # Convertir en numpy float32
                 weight_np = np.array(weight, dtype=np.float32)
-                
-                # Transposer les matrices linéaires
+
+                # Transposer les matrices linéaires (sauf embeddings)
                 # T5X: (in_features, out_features)
                 # PyTorch: (out_features, in_features)
                 if '.weight' in pytorch_name and len(weight_np.shape) == 2:
-                    weight_np = weight_np.T
-                
+                    if not 'embed_tokens' in pytorch_name:  # Ne pas transposer les embeddings
+                        weight_np = weight_np.T
+
                 # Convertir en tensor PyTorch
                 pytorch_state[pytorch_name] = torch.from_numpy(weight_np)
                 converted_count += 1
-                
+
                 if converted_count <= 10:
                     print(f"  {t5x_name}")
                     print(f"    → {pytorch_name}")
                     print(f"       Shape: {list(weight_np.shape)}")
-                        
+
             except Exception as e:
                 skipped.append((t5x_name, str(e)))
                 if len(skipped) <= 3:
                     print(f"  ⚠️  Erreur avec {t5x_name}: {e}")
-        
+
         if converted_count > 10:
             print(f"  ... et {converted_count - 10} autres")
-        
+
         if skipped and len(skipped) > 3:
             print(f"\n⚠️  {len(skipped)} paramètres ignorés")
-        
+
         print(f"\n✅ {converted_count} paramètres convertis")
         return pytorch_state
+
+    def _convert_parameter_name(self, name):
+        """Convertit un nom de paramètre T5X vers la structure T5 standard PyTorch"""
+
+        # Embeddings spéciaux
+        if name == 'decoder.token_embedder.embedding':
+            return 'decoder.embed_tokens.weight'
+        if name == 'encoder.continuous_inputs_projection.kernel':
+            return 'encoder.input_projection.weight'
+        if name == 'decoder.logits_dense.kernel':
+            return 'decoder.lm_head.weight'
+
+        # Encoder layers: encoder.layers_X → encoder.block.X
+        if name.startswith('encoder.layers_'):
+            return self._convert_encoder_layer(name)
+
+        # Decoder layers: decoder.layers_X → decoder.block.X
+        if name.startswith('decoder.layers_'):
+            return self._convert_decoder_layer(name)
+
+        return None
+
+    def _convert_encoder_layer(self, name):
+        """Convertit les noms de paramètres encoder"""
+        # encoder.layers_X.attention → encoder.block.X.layer.0.SelfAttention
+        # encoder.layers_X.mlp → encoder.block.X.layer.1.DenseReluDense
+
+        parts = name.split('.')
+        layer_num = parts[1].replace('layers_', '')
+
+        if 'attention' in name:
+            # encoder.layers_X.attention.query.kernel → encoder.block.X.layer.0.SelfAttention.q.weight
+            if 'query.kernel' in name:
+                return f'encoder.block.{layer_num}.layer.0.SelfAttention.q.weight'
+            elif 'key.kernel' in name:
+                return f'encoder.block.{layer_num}.layer.0.SelfAttention.k.weight'
+            elif 'value.kernel' in name:
+                return f'encoder.block.{layer_num}.layer.0.SelfAttention.v.weight'
+            elif 'out.kernel' in name:
+                return f'encoder.block.{layer_num}.layer.0.SelfAttention.o.weight'
+
+        elif 'mlp' in name:
+            # encoder.layers_X.mlp.wi_0.kernel → encoder.block.X.layer.1.DenseReluDense.wi_0.weight
+            if 'wi_0.kernel' in name:
+                return f'encoder.block.{layer_num}.layer.1.DenseReluDense.wi_0.weight'
+            elif 'wi_1.kernel' in name:
+                return f'encoder.block.{layer_num}.layer.1.DenseReluDense.wi_1.weight'
+            elif 'wo.kernel' in name:
+                return f'encoder.block.{layer_num}.layer.1.DenseReluDense.wo.weight'
+
+        # Layer norms (T5X uses .scale for RMSNorm weight)
+        elif 'pre_attention_layer_norm.scale' in name or 'layer_norm.scale' in name:
+            return f'encoder.block.{layer_num}.layer.0.layer_norm.weight'
+        elif 'pre_mlp_layer_norm.scale' in name or 'final_layer_norm.scale' in name:
+            return f'encoder.block.{layer_num}.layer.1.layer_norm.weight'
+
+        return None
+
+    def _convert_decoder_layer(self, name):
+        """Convertit les noms de paramètres decoder"""
+        # decoder.layers_X.self_attention → decoder.block.X.layer.0.SelfAttention
+        # decoder.layers_X.encoder_decoder_attention → decoder.block.X.layer.1.EncDecAttention
+        # decoder.layers_X.mlp → decoder.block.X.layer.2.DenseReluDense
+
+        parts = name.split('.')
+        layer_num = parts[1].replace('layers_', '')
+
+        if 'self_attention' in name:
+            # decoder.layers_X.self_attention.query.kernel → decoder.block.X.layer.0.SelfAttention.q.weight
+            if 'query.kernel' in name:
+                return f'decoder.block.{layer_num}.layer.0.SelfAttention.q.weight'
+            elif 'key.kernel' in name:
+                return f'decoder.block.{layer_num}.layer.0.SelfAttention.k.weight'
+            elif 'value.kernel' in name:
+                return f'decoder.block.{layer_num}.layer.0.SelfAttention.v.weight'
+            elif 'out.kernel' in name:
+                return f'decoder.block.{layer_num}.layer.0.SelfAttention.o.weight'
+
+        elif 'encoder_decoder_attention' in name:
+            # decoder.layers_X.encoder_decoder_attention.query.kernel → decoder.block.X.layer.1.EncDecAttention.q.weight
+            if 'query.kernel' in name:
+                return f'decoder.block.{layer_num}.layer.1.EncDecAttention.q.weight'
+            elif 'key.kernel' in name:
+                return f'decoder.block.{layer_num}.layer.1.EncDecAttention.k.weight'
+            elif 'value.kernel' in name:
+                return f'decoder.block.{layer_num}.layer.1.EncDecAttention.v.weight'
+            elif 'out.kernel' in name:
+                return f'decoder.block.{layer_num}.layer.1.EncDecAttention.o.weight'
+
+        elif 'mlp' in name:
+            # decoder.layers_X.mlp.wi_0.kernel → decoder.block.X.layer.2.DenseReluDense.wi_0.weight
+            if 'wi_0.kernel' in name:
+                return f'decoder.block.{layer_num}.layer.2.DenseReluDense.wi_0.weight'
+            elif 'wi_1.kernel' in name:
+                return f'decoder.block.{layer_num}.layer.2.DenseReluDense.wi_1.weight'
+            elif 'wo.kernel' in name:
+                return f'decoder.block.{layer_num}.layer.2.DenseReluDense.wo.weight'
+
+        # Layer norms (T5X uses .scale for RMSNorm weight)
+        # decoder has 3 layer norms per block (self-attn, cross-attn, ffn)
+        elif 'pre_self_attention_layer_norm.scale' in name:
+            return f'decoder.block.{layer_num}.layer.0.layer_norm.weight'
+        elif 'pre_cross_attention_layer_norm.scale' in name:
+            return f'decoder.block.{layer_num}.layer.1.layer_norm.weight'
+        elif 'pre_mlp_layer_norm.scale' in name or 'final_layer_norm.scale' in name:
+            return f'decoder.block.{layer_num}.layer.2.layer_norm.weight'
+
+        return None
     
     def save_pytorch_checkpoint(self, pytorch_state, model_name="mt3_converted"):
         """Sauvegarde au format PyTorch"""
