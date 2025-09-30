@@ -217,16 +217,20 @@ class T5XToPyTorchConverter:
 
     def _add_missing_layer_norms(self, pytorch_state):
         """
-        Initialize missing layer norm parameters with default values.
-        T5X checkpoints often don't include layer norm parameters - they're initialized to ones.
+        Initialize missing parameters with default values.
+        - Layer norms: initialized to ones (RMSNorm scale)
+        - Relative attention bias: initialized with small random values
+        - Weight tying: create references for shared embeddings
         """
-        print("\n🔧 Initialisation des layer norms manquants...")
+        print("\n🔧 Initialisation des paramètres manquants...")
 
         # Detect d_model from existing parameters
-        if 'decoder.embed_tokens.weight' in pytorch_state:
-            d_model = pytorch_state['decoder.embed_tokens.weight'].shape[1]
+        if 'shared.weight' in pytorch_state:
+            d_model = pytorch_state['shared.weight'].shape[1]
+            vocab_size = pytorch_state['shared.weight'].shape[0]
         else:
             d_model = 512  # default
+            vocab_size = 1536  # default
 
         # Detect number of layers from converted parameters
         encoder_layers = len([k for k in pytorch_state.keys() if k.startswith('encoder.block.')])
@@ -280,6 +284,32 @@ class T5XToPyTorchConverter:
             print(f"✅ {added_count} layer_norm.weight initialisés à ones()")
             print(f"   (RMSNorm standard: scale parameters = 1.0)")
 
+        # Add weight tying for embeddings (encoder and decoder reference shared.weight)
+        if 'shared.weight' in pytorch_state:
+            # These are references, not copies - PyTorch handles weight tying via _tie_weights()
+            if 'encoder.embed_tokens.weight' not in pytorch_state:
+                pytorch_state['encoder.embed_tokens.weight'] = pytorch_state['shared.weight']
+                print(f"✅ encoder.embed_tokens.weight → shared.weight (weight tying)")
+            if 'decoder.embed_tokens.weight' not in pytorch_state:
+                pytorch_state['decoder.embed_tokens.weight'] = pytorch_state['shared.weight']
+                print(f"✅ decoder.embed_tokens.weight → shared.weight (weight tying)")
+
+        # Add relative attention bias for first layer (T5 uses relative position bias)
+        # num_heads=8, num_buckets=32 (standard T5 config)
+        num_heads = 8
+        num_buckets = 32
+
+        bias_params = [
+            'encoder.block.0.layer.0.SelfAttention.relative_attention_bias.weight',
+            'decoder.block.0.layer.0.SelfAttention.relative_attention_bias.weight'
+        ]
+
+        for key in bias_params:
+            if key not in pytorch_state:
+                # Initialize with small random values (standard for relative position bias)
+                pytorch_state[key] = torch.randn(num_buckets, num_heads, dtype=torch.float32) * 0.02
+                print(f"✅ {key.split('.')[-3]}.{key.split('.')[-2]} relative_attention_bias initialisé")
+
         return pytorch_state
 
     def _convert_parameter_name(self, name):
@@ -287,7 +317,7 @@ class T5XToPyTorchConverter:
 
         # Embeddings spéciaux
         if name == 'decoder.token_embedder.embedding':
-            return 'decoder.embed_tokens.weight'
+            return 'shared.weight'  # Shared embeddings between encoder and decoder
 
         # Note: encoder.continuous_inputs_projection is not used in current MT3Model
         # Audio features are processed through the preprocessor before embedding
@@ -295,7 +325,7 @@ class T5XToPyTorchConverter:
             return None  # Skip - not present in PyTorch MT3Model
 
         if name == 'decoder.logits_dense.kernel':
-            return 'decoder.lm_head.weight'
+            return 'lm_head.weight'  # Top-level lm_head, not decoder.lm_head
 
         # Encoder layers: encoder.layers_X → encoder.block.X
         if name.startswith('encoder.layers_'):
