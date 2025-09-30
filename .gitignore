@@ -38,6 +38,7 @@ env/
 # Jupyter Notebook
 .ipynb_checkpoints
 *.ipynb
+!MT3_Test_Notebook.ipynb
 
 # IDEs
 .vscode/
