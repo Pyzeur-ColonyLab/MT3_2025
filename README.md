@@ -26,7 +26,11 @@ Complete PyTorch implementation of MT3 (Music Transcription with Transformers) f
 git clone https://github.com/Pyzeur-ColonyLab/MT3_2025.git
 cd MT3_2025
 
-# Install dependencies
+# Install system dependencies (required for audio processing)
+sudo apt-get update
+sudo apt-get install -y ffmpeg
+
+# Install Python dependencies
 pip install -r requirements.txt
 
 # Download MT3 checkpoint (if not included)
@@ -38,6 +42,12 @@ pip install -r requirements.txt
 ```bash
 git clone https://github.com/Pyzeur-ColonyLab/MT3_2025.git
 cd MT3_2025
+
+# Install ffmpeg (OS-specific)
+# Ubuntu/Debian: sudo apt-get install -y ffmpeg
+# macOS: brew install ffmpeg
+# Windows: download from https://ffmpeg.org/download.html
+
 pip install -r requirements.txt
 ```
 
