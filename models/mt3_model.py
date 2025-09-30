@@ -816,6 +816,7 @@ class MT3Model(nn.Module):
     def generate(
         self,
         input_ids: Optional[Tensor] = None,
+        inputs_embeds: Optional[Tensor] = None,
         encoder_outputs: Optional[Tuple[Tensor]] = None,
         attention_mask: Optional[Tensor] = None,
         max_length: int = None,
@@ -833,7 +834,8 @@ class MT3Model(nn.Module):
         Generate token sequences using the model.
 
         Args:
-            input_ids: Input token IDs for encoder
+            input_ids: Input token IDs for encoder (for text/discrete inputs)
+            inputs_embeds: Pre-embedded inputs for encoder (for audio/continuous inputs)
             encoder_outputs: Pre-computed encoder outputs
             attention_mask: Attention mask for encoder
             max_length: Maximum generation length
@@ -851,16 +853,25 @@ class MT3Model(nn.Module):
         pad_token_id = pad_token_id or self.config.pad_token_id
         eos_token_id = eos_token_id or self.config.eos_token_id
 
-        if input_ids is None and encoder_outputs is None:
-            raise ValueError("Must provide either input_ids or encoder_outputs")
+        if input_ids is None and inputs_embeds is None and encoder_outputs is None:
+            raise ValueError("Must provide either input_ids, inputs_embeds, or encoder_outputs")
 
-        batch_size = input_ids.shape[0] if input_ids is not None else encoder_outputs['last_hidden_state'].shape[0]
-        device = input_ids.device if input_ids is not None else encoder_outputs['last_hidden_state'].device
+        # Determine batch size and device
+        if input_ids is not None:
+            batch_size = input_ids.shape[0]
+            device = input_ids.device
+        elif inputs_embeds is not None:
+            batch_size = inputs_embeds.shape[0]
+            device = inputs_embeds.device
+        else:
+            batch_size = encoder_outputs['last_hidden_state'].shape[0]
+            device = encoder_outputs['last_hidden_state'].device
 
         # Encode input if not provided
         if encoder_outputs is None:
             encoder_outputs = self.encoder(
                 input_ids=input_ids,
+                inputs_embeds=inputs_embeds,
                 attention_mask=attention_mask,
                 return_dict=True,
             )

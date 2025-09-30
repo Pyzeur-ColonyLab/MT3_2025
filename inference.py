@@ -141,9 +141,10 @@ class MT3Inference:
         }
 
         # 2. Generate tokens
+        # Audio features are continuous (not token IDs), so pass as inputs_embeds
         with torch.no_grad():
             generated_tokens = self.model.generate(
-                input_ids=encoder_input['encoder_input'],
+                inputs_embeds=encoder_input['encoder_input'],  # Continuous audio features
                 attention_mask=encoder_input.get('attention_mask'),
                 max_length=max_length,
                 do_sample=do_sample,
