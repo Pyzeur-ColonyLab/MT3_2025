@@ -607,6 +607,170 @@ Structure pour tests progressifs :
 
 ---
 
+## 9. 🔄 Déploiement sur Brev NVIDIA Instance - **EN COURS**
+
+### Statut : DEBUGGING
+**Localisation** : Instance Brev avec GPU NVIDIA A10G
+**Date** : 30 Septembre 2025
+
+### ✅ Progrès accomplis
+
+#### Checkpoint Conversion Fixes
+1. **✅ Correction des noms de paramètres**
+   - Fixed parameter naming from T5X to PyTorch (T5 standard structure)
+   - `decoder.token_embedder.embedding` → `shared.weight`
+   - `decoder.logits_dense.kernel` → `lm_head.weight`
+   - Encoder/decoder block structure: `layers_X` → `block.X.layer.Y`
+
+2. **✅ Correction d_kv dimension**
+   - Changed from 64 to 48 (MT3 uses inner_dim=384 = 8 heads × 48)
+   - Updated MT3Config and validation logic
+
+3. **✅ Initialisation des layer_norms**
+   - T5X checkpoint ne contient PAS de layer_norm parameters
+   - Created automatic initialization: 42 layer_norms → ones() (RMSNorm scale=1.0)
+   - Fixed for all encoder/decoder blocks (2-3 layer_norms per block)
+
+4. **✅ Ajout relative_attention_bias**
+   - Initialized for first encoder/decoder layers
+   - Shape: [num_buckets=32, num_heads=8]
+   - Small random values (×0.02)
+
+5. **✅ Weight tying pour embeddings**
+   - `encoder.embed_tokens.weight` → references `shared.weight`
+   - `decoder.embed_tokens.weight` → references `shared.weight`
+
+6. **✅ Script fix_checkpoint_dimensions.py**
+   - Transposes embeddings: `[512, 1536]` → `[1536, 512]`
+   - Resizes layer_norms: `[1536]` → `[512]`
+   - Fixes all dimension mismatches post-conversion
+
+#### Model Loading Fixes
+7. **✅ KeyError 'parameters_loaded'**
+   - Fixed in inference.py: `'parameters_loaded'` → `'parameter_count'`
+
+8. **✅ inputs_embeds support**
+   - Added `inputs_embeds` parameter to `generate()` method
+   - Audio features are continuous (floats), not discrete token IDs
+   - Fixed RuntimeError: Expected Long/Int but got FloatTensor
+
+9. **✅ continuous_inputs_projection layer**
+   - Added to MT3Encoder for audio feature projection
+   - Projects mel spectrogram features to d_model
+   - Updated T5X converter to include this layer
+
+### ⚠️ Issues en cours de résolution
+
+#### 1. Mel bins mismatch (BLOQUANT)
+**Problem**: Preprocessor configured for 256 mel bins, but checkpoint expects 512
+
+**Evidence**:
+```bash
+# T5X checkpoint projection layer
+target.encoder.continuous_inputs_projection.kernel: (512, 512)
+# After transpose: (512, 512)
+```
+
+**Current preprocessor config**:
+```python
+AudioPreprocessingConfig(
+    n_mels=256,  # ❌ Devrait être 512
+    sample_rate=16000,
+    hop_length=320,
+    ...
+)
+```
+
+**Impact**: RuntimeError lors de l'encoding
+```
+RuntimeError: The size of tensor a (512) must match the size of tensor b (256)
+at non-singleton dimension 2
+```
+
+**Solution requise**:
+- Trouver le fichier de configuration du preprocessor
+- Changer `n_mels=256` → `n_mels=512`
+- Ou créer nouveau preprocessor config avec 512 mel bins
+
+**Status**: 🔍 En cours d'investigation
+
+### 📝 Fichiers créés/modifiés
+
+**Scripts de conversion**:
+- `t5x_converter_fixed.py` - Converter avec tous les fixes
+- `fix_checkpoint_dimensions.py` - Post-processing pour dimensions
+- `config.json` - Configuration modèle (vocabsize=1536, d_model=512, layers=8)
+
+**Checkpoints**:
+- `mt3_converted.pth` - Checkpoint brut après conversion (183 MB)
+- `mt3_converted_fixed.pth` - Checkpoint avec dimensions corrigées (183 MB)
+- Total parameters: 47,513,088 (47.5M)
+
+**Configuration Jupyter**:
+```python
+CHECKPOINT_PATH = "mt3_converted_fixed.pth"
+DEVICE = "cuda"  # NVIDIA A10G
+```
+
+### 🔧 Commits GitHub
+
+1. `6e8c466` - Fix KeyError et amélioration diagnostics
+2. `ebd67a3` - Initialize missing layer norm parameters
+3. `13ef6e5` - Fix embedding names and add missing T5 parameters
+4. `58100e0` - Fix transpose logic for all 2D weights
+5. `2e1f041` - Add script to fix checkpoint dimensions
+6. `73513a0` - Fix audio input handling (inputs_embeds)
+7. `875cd56` - Add continuous input projection layer
+
+### 📊 Tests effectués
+
+**✅ Tests réussis**:
+- Checkpoint conversion (147 params → 188 params with layer_norms)
+- Dimension fixing script
+- Model initialization and loading
+- Config.json manual correction
+
+**⏳ Tests en attente**:
+- Audio transcription end-to-end
+- MIDI output quality validation
+- Performance benchmarks
+
+### 🎯 Prochaines étapes
+
+1. **PRIORITÉ 1**: Résoudre le mismatch mel_bins (256 vs 512)
+   - Localiser fichier de config preprocessor
+   - Modifier n_mels → 512
+   - Retester audio transcription
+
+2. **PRIORITÉ 2**: Validation transcription complète
+   - Test avec fichier audio court (~10s)
+   - Vérifier qualité MIDI output
+   - Ajuster paramètres de génération si nécessaire
+
+3. **PRIORITÉ 3**: Documentation deployment
+   - Guide complet Brev instance setup
+   - Liste des issues résolues
+   - Checklist de validation
+
+### 📚 Documentation technique
+
+**Issues majeures résolues**:
+1. Transposition incorrecte des embeddings
+2. Layer norms manquants dans T5X checkpoint
+3. Relative attention bias non initialisé
+4. Weight tying pour embeddings partagés
+5. FloatTensor vs LongTensor pour audio features
+6. continuous_inputs_projection layer manquant
+
+**Lessons learned**:
+- T5X checkpoints ne contiennent pas les layer_norms (normaux, initialisés à ones)
+- MT3 utilise d_kv=48 (pas d_model/num_heads=64)
+- Audio features doivent être passées comme inputs_embeds, pas input_ids
+- Toujours vérifier dimensions AVANT ET APRÈS transpose
+- Configuration detection peut être incorrecte (nécessite fix manuel)
+
+---
+
 ## Ressources et documentation
 
 ### Dépôts GitHub
