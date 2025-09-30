@@ -1,0 +1,21 @@
+# MT3 PyTorch Implementation - Complete Dependencies
+
+# Core ML frameworks
+torch>=1.9.0
+numpy>=1.20.0
+
+# Audio processing
+librosa>=0.8.0
+soundfile>=0.10.0
+
+# MIDI and music processing
+note-seq>=0.0.5
+pretty-midi>=0.2.9
+absl-py>=1.0.0
+
+# Utilities
+tqdm>=4.50.0
+dataclasses>=0.6; python_version < '3.7'
+
+# Optional but recommended
+scikit-learn>=1.0.0  # For evaluation metrics

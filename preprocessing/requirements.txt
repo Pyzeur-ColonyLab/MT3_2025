@@ -1,0 +1,31 @@
+# MT3 Audio Preprocessing Requirements
+# Comprehensive audio preprocessing pipeline for MT3
+
+# Core ML framework
+torch>=1.9.0,<3.0.0
+numpy>=1.20.0,<2.0.0
+
+# Audio processing (required)
+librosa>=0.8.0,<1.0.0
+soundfile>=0.10.0,<1.0.0
+
+# Optional accelerated audio processing
+# numba>=0.50.0  # Accelerates librosa (optional but recommended)
+
+# Progress tracking
+tqdm>=4.50.0
+
+# Testing and development
+pytest>=6.0.0
+pytest-benchmark>=3.4.0
+
+# For running examples and performance analysis
+matplotlib>=3.3.0  # For plotting (optional)
+scipy>=1.5.0       # For signal processing utilities (optional)
+
+# Type hints and utilities
+typing-extensions>=3.7.0
+
+# For memory profiling (development)
+# memory-profiler>=0.58.0  # Optional for memory analysis
+# psutil>=5.7.0           # System resource monitoring
