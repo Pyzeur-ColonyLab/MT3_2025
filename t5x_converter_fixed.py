@@ -330,10 +330,9 @@ class T5XToPyTorchConverter:
         if name == 'decoder.token_embedder.embedding':
             return 'shared.weight'  # Shared embeddings between encoder and decoder
 
-        # Note: encoder.continuous_inputs_projection is not used in current MT3Model
-        # Audio features are processed through the preprocessor before embedding
+        # Input projection for audio features (mel_bins → d_model)
         if name == 'encoder.continuous_inputs_projection.kernel':
-            return None  # Skip - not present in PyTorch MT3Model
+            return 'encoder.continuous_inputs_projection.weight'
 
         if name == 'decoder.logits_dense.kernel':
             return 'lm_head.weight'  # Top-level lm_head, not decoder.lm_head

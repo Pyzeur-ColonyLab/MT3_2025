@@ -625,8 +625,26 @@ class MT3Encoder(MT3Stack):
     def __init__(self, config: MT3Config, embed_tokens: Optional[nn.Embedding] = None):
         super().__init__(config, embed_tokens)
 
+        # Input projection for continuous audio features (mel spectrogram → d_model)
+        # MT3 uses 256 mel bins, projects to d_model (512)
+        self.continuous_inputs_projection = nn.Linear(256, config.d_model, bias=False)
+
         for i in range(config.num_encoder_layers):
             self.block.append(MT3Block(config, has_relative_attention_bias=(i == 0)))
+
+    def forward(
+        self,
+        input_ids: Optional[Tensor] = None,
+        inputs_embeds: Optional[Tensor] = None,
+        **kwargs
+    ):
+        """Forward pass for encoder with continuous audio input projection."""
+        # If inputs_embeds provided (audio features), project from mel_bins to d_model
+        if inputs_embeds is not None and inputs_embeds.size(-1) == 256:
+            # Audio features: [batch, seq_len, 256] → [batch, seq_len, 512]
+            inputs_embeds = self.continuous_inputs_projection(inputs_embeds)
+
+        return super().forward(input_ids=input_ids, inputs_embeds=inputs_embeds, **kwargs)
 
 
 class MT3Decoder(MT3Stack):
