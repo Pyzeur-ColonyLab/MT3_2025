@@ -33,8 +33,9 @@ sudo apt-get install -y ffmpeg
 # Install Python dependencies
 pip install -r requirements.txt
 
-# Download MT3 checkpoint (if not included)
-# Place mt3_converted.pth in the root directory
+# Setup MT3 checkpoint (automated)
+bash setup_mt3_checkpoint.sh
+# This will download and convert the T5X checkpoint (~10-15 minutes)
 ```
 
 ### Local Installation
@@ -49,7 +50,29 @@ cd MT3_2025
 # Windows: download from https://ffmpeg.org/download.html
 
 pip install -r requirements.txt
+
+# Get MT3 checkpoint
+# See CHECKPOINT_SETUP.md for detailed instructions
+bash setup_mt3_checkpoint.sh
 ```
+
+## 📥 Getting the Checkpoint
+
+MT3 requires a converted PyTorch checkpoint (~183 MB). We provide an automated setup script:
+
+```bash
+# Automated setup (recommended)
+bash setup_mt3_checkpoint.sh
+```
+
+This script will:
+- Download the T5X checkpoint from Google Cloud Storage
+- Convert it to PyTorch format
+- Verify the conversion
+
+**Time required:** 10-15 minutes (depending on internet speed)
+
+For detailed instructions and troubleshooting, see **[CHECKPOINT_SETUP.md](CHECKPOINT_SETUP.md)**
 
 ## 🚀 Quick Start
 
