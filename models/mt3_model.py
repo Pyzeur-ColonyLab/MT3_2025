@@ -923,13 +923,13 @@ class MT3Model(nn.Module):
                 logits = logits / temperature
 
             # Apply top-k filtering
-            if top_k > 0:
+            if top_k is not None and top_k > 0:
                 top_k_logits, _ = torch.topk(logits, min(top_k, logits.size(-1)))
                 min_top_k = top_k_logits[:, -1].unsqueeze(-1)
                 logits = torch.where(logits < min_top_k, torch.full_like(logits, -float('inf')), logits)
 
             # Apply top-p filtering
-            if top_p < 1.0:
+            if top_p is not None and top_p < 1.0:
                 sorted_logits, sorted_indices = torch.sort(logits, descending=True)
                 cumulative_probs = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
                 sorted_indices_to_remove = cumulative_probs > top_p
