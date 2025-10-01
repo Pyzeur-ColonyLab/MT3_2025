@@ -4,7 +4,7 @@ Check vocabulary mismatch between model and decoder
 """
 import torch
 from models import MT3Model, MT3Config
-from decoder import MT3TokenDecoder
+from decoder.decoder import MT3TokenDecoder
 
 print("=" * 60)
 print("MT3 Vocabulary Mismatch Check")
