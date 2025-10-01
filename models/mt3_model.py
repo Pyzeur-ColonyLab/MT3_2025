@@ -127,9 +127,9 @@ class MT3LayerFF(nn.Module):
 class MT3Attention(nn.Module):
     """Multi-head attention with relative position bias (T5 style)."""
 
-    def __init__(self, config: MT3Config, has_relative_attention_bias: bool = False):
+    def __init__(self, config: MT3Config, has_relative_attention_bias: bool = False, is_decoder: bool = False):
         super().__init__()
-        self.is_decoder = hasattr(self, 'is_decoder') and self.is_decoder
+        self.is_decoder = is_decoder
         self.has_relative_attention_bias = has_relative_attention_bias
         self.relative_attention_num_buckets = config.relative_attention_num_buckets
         self.relative_attention_max_distance = config.relative_attention_max_distance
@@ -289,9 +289,9 @@ class MT3Attention(nn.Module):
 class MT3LayerSelfAttention(nn.Module):
     """Self-attention layer for MT3."""
 
-    def __init__(self, config: MT3Config, has_relative_attention_bias: bool = False):
+    def __init__(self, config: MT3Config, has_relative_attention_bias: bool = False, is_decoder: bool = False):
         super().__init__()
-        self.SelfAttention = MT3Attention(config, has_relative_attention_bias)
+        self.SelfAttention = MT3Attention(config, has_relative_attention_bias, is_decoder=is_decoder)
         self.layer_norm = RMSNorm(config.d_model, eps=config.layer_norm_epsilon)
         self.dropout = nn.Dropout(config.dropout_rate)
 
@@ -413,7 +413,7 @@ class MT3BlockDecoder(nn.Module):
     def __init__(self, config: MT3Config, has_relative_attention_bias: bool = False):
         super().__init__()
         self.layer = nn.ModuleList()
-        self.layer.append(MT3LayerSelfAttention(config, has_relative_attention_bias))
+        self.layer.append(MT3LayerSelfAttention(config, has_relative_attention_bias, is_decoder=True))
         self.layer.append(MT3LayerCrossAttention(config))
         self.layer.append(MT3LayerFF(config))
 
