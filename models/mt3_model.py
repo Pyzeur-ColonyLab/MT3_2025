@@ -894,17 +894,17 @@ class MT3Model(nn.Module):
                 return_dict=True,
             )
 
-        # Initialize decoder input
-        decoder_input_ids = torch.full(
-            (batch_size, 1),
-            self.config.decoder_start_token_id,
+        # Initialize decoder input with pad token and decoder_start_token
+        # T5 decoder expects 2 initial tokens for proper position bias
+        decoder_input_ids = torch.tensor(
+            [[pad_token_id, self.config.decoder_start_token_id]] * batch_size,
             dtype=torch.long,
             device=device,
         )
 
         past_key_values = None
 
-        for _ in range(max_length - 1):  # -1 because we start with one token
+        for _ in range(max_length - 2):  # -2 because we start with two tokens
             # Forward pass
             outputs = self.forward(
                 encoder_outputs=encoder_outputs,
