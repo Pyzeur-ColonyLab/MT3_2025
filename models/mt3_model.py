@@ -584,8 +584,9 @@ class MT3Stack(nn.Module):
             if use_cache:
                 presents = presents + (layer_outputs[1],)
 
-            # Update position bias
-            if i == 0:
+            # Update position bias (only for first layer and only if not using cache with past_key_values)
+            # When using cache, position_bias must be recalculated each step due to changing dimensions
+            if i == 0 and not (use_cache and past_key_values is not None):
                 position_bias = layer_outputs[2 if use_cache else 1]
                 if self.is_decoder and encoder_hidden_states is not None:
                     encoder_decoder_position_bias = layer_outputs[3 if use_cache else 2]
