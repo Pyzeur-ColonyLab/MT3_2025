@@ -6,7 +6,7 @@ Comprehensive audio preprocessing for Music Transcription with Transformers (MT3
 Converts raw audio files to mel-scale spectrograms compatible with MT3 encoder.
 
 Features:
-- MT3-compliant mel-scale spectrogram computation (256 mel bins, 16kHz sample rate)
+- MT3-compliant mel-scale spectrogram computation (512 mel bins, 16kHz sample rate)
 - Memory-efficient chunked processing for long audio files
 - Batch processing capabilities
 - Multiple audio format support (wav, mp3, flac, etc.)
@@ -37,7 +37,7 @@ class AudioPreprocessingConfig:
 
     # Audio parameters (MT3 standards)
     sample_rate: int = 16000
-    n_mels: int = 256  # Use 256 for better quality
+    n_mels: int = 512  # MT3 checkpoint uses 512 mel bins
     hop_length: int = 320  # Use 320 for efficiency
     win_length: int = 512
     n_fft: int = 1024
