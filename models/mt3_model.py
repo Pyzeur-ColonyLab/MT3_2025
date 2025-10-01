@@ -250,7 +250,8 @@ class MT3Attention(nn.Module):
         # Compute attention scores
         scores = torch.matmul(query_states, key_states.transpose(3, 2))
 
-        if position_bias is None:
+        # Recalculate position_bias when using cache (past_key_value) since shapes change each step
+        if position_bias is None or (past_key_value is not None and self.is_decoder):
             if not self.has_relative_attention_bias:
                 position_bias = torch.zeros(
                     (1, self.n_heads, real_seq_length, key_length),
@@ -260,7 +261,7 @@ class MT3Attention(nn.Module):
             else:
                 position_bias = self.compute_bias(real_seq_length, key_length, device=scores.device)
 
-            # If this is a decoder and we have past key/values, only compute position bias for the last token
+            # If this is a decoder and we have past key/values, only use position bias for the last token
             if past_key_value is not None and self.is_decoder:
                 position_bias = position_bias[:, :, -hidden_states.size(1) :, :]
 
@@ -894,17 +895,17 @@ class MT3Model(nn.Module):
                 return_dict=True,
             )
 
-        # Initialize decoder input with pad token and decoder_start_token
-        # T5 decoder expects 2 initial tokens for proper position bias
-        decoder_input_ids = torch.tensor(
-            [[pad_token_id, self.config.decoder_start_token_id]] * batch_size,
+        # Initialize decoder input with decoder_start_token
+        decoder_input_ids = torch.full(
+            (batch_size, 1),
+            self.config.decoder_start_token_id,
             dtype=torch.long,
             device=device,
         )
 
         past_key_values = None
 
-        for _ in range(max_length - 2):  # -2 because we start with two tokens
+        for _ in range(max_length - 1):  # -1 because we start with one token
             # Forward pass
             outputs = self.forward(
                 encoder_outputs=encoder_outputs,
