@@ -13,7 +13,9 @@ print("=" * 60)
 
 # 1. Test preprocessor configuration
 print("\n1. Preprocessor Configuration")
-config = AudioPreprocessingConfig()
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+print(f"   Device: {device}")
+config = AudioPreprocessingConfig(device=device)
 print(f"   n_mels: {config.n_mels}")
 assert config.n_mels == 512, f"❌ Expected 512, got {config.n_mels}"
 print("   ✅ Preprocessor config: n_mels = 512")
@@ -38,7 +40,7 @@ print(f"   ✅ Encoder input: [batch={enc_shape[0]}, seq={enc_shape[1]}, mel_bin
 # 4. Test model continuous_inputs_projection
 print("\n4. Model Projection Layer")
 model_config = MT3Config()
-model = MT3Model(model_config)
+model = MT3Model(model_config).to(device)
 proj_weight = model.encoder.continuous_inputs_projection.weight
 print(f"   continuous_inputs_projection weight: {proj_weight.shape}")
 assert proj_weight.shape == torch.Size([512, 512]), f"❌ Expected [512, 512], got {proj_weight.shape}"
