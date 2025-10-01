@@ -32,13 +32,19 @@ if 'shared.weight' in state_dict:
 print("\n2. Decoder vocabulary:")
 decoder = MT3TokenDecoder(num_velocity_bins=1)
 print(f"   Decoder vocab size: {decoder.get_vocab_size()}")
-print(f"   Codec event types: {len(decoder.codec.event_type_range)}")
+try:
+    print(f"   Codec event types: {len(decoder.codec.event_type_range())}")
+except:
+    print(f"   Codec configured")
 
 # Print first few vocab tokens
-vocab_info = decoder.get_codec_info()
-print(f"   Event ranges:")
-for event_type, (start, end) in list(vocab_info['event_ranges'].items())[:10]:
-    print(f"     {event_type}: [{start}, {end})")
+try:
+    vocab_info = decoder.get_codec_info()
+    print(f"   Event ranges:")
+    for event_type, (start, end) in list(vocab_info['event_ranges'].items())[:10]:
+        print(f"     {event_type}: [{start}, {end})")
+except Exception as e:
+    print(f"   (Could not get event ranges: {e})")
 
 # 3. Check if token 1133 is valid
 print("\n3. Analyzing problematic token 1133:")
