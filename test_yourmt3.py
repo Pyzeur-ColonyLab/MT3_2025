@@ -5,9 +5,16 @@ Test YourMT3 with The Shire audio
 import sys
 import os
 
+# Save original directory
+original_dir = os.getcwd()
+audio_path_full = os.path.join(original_dir, "02.HowardShore-TheShire.flac")
+
+# Change to yourmt3_space directory (needed for checkpoint paths)
+os.chdir('yourmt3_space')
+
 # Add YourMT3 paths
-sys.path.insert(0, os.path.abspath('yourmt3_space'))
-sys.path.insert(0, os.path.abspath('yourmt3_space/amt/src'))
+sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath('amt/src'))
 
 import torch
 import torchaudio
@@ -59,8 +66,8 @@ except Exception as e:
     traceback.print_exc()
     sys.exit(1)
 
-# Audio file
-audio_path = "02.HowardShore-TheShire.flac"
+# Audio file (use full path from original directory)
+audio_path = audio_path_full
 print(f"\n2. Loading audio: {audio_path}")
 
 if not os.path.exists(audio_path):
