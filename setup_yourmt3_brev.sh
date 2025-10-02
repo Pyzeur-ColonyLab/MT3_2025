@@ -23,10 +23,18 @@ fi
 # Install dependencies
 echo ""
 echo "1. Installing Python dependencies..."
+echo "   Installing core dependencies..."
 pip install torch torchaudio --quiet
-pip install pytorch-lightning>=2.2.1 --quiet
-pip install transformers==4.45.1 --quiet
-pip install einops mido --quiet
+echo "   Installing YourMT3 requirements..."
+pip install -r yourmt3_space/requirements.txt --quiet 2>/dev/null || {
+    echo "   ⚠️  Some requirements may have failed, installing critical ones manually..."
+    pip install pytorch-lightning>=2.2.1 --quiet
+    pip install transformers==4.45.1 --quiet
+    pip install einops mido --quiet
+    pip install librosa --quiet
+    pip install "git+https://github.com/craffel/mir_eval.git" --quiet
+    pip install deprecated --quiet
+}
 pip install pretty_midi --quiet
 echo "   ✅ Dependencies installed"
 
