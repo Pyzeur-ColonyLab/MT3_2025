@@ -42,6 +42,7 @@ venv_yourmt3/
 !MT3_Test_Notebook.ipynb
 !YourMT3_Interactive_Test.ipynb
 !Stems_PoC_Test.ipynb
+!Stems_PoC_Test_Fixed.ipynb
 
 # IDEs
 .vscode/
@@ -53,6 +54,7 @@ venv_yourmt3/
 # OS
 .DS_Store
 Thumbs.db
+._*
 
 # Project specific
 mt3-pytorch/
