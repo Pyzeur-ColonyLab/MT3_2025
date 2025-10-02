@@ -28,6 +28,7 @@ venv/
 ENV/
 env/
 .venv
+venv_yourmt3/
 
 # PyTorch
 *.pth
@@ -56,6 +57,9 @@ mt3-pytorch/
 Research/
 Validation/
 Omnizart_Validation/
+yourmt3_space/
+yourmt3_checkpoint/
+model_output/
 
 # Audio files (too large for git)
 *.wav
