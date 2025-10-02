@@ -41,6 +41,7 @@ venv_yourmt3/
 *.ipynb
 !MT3_Test_Notebook.ipynb
 !YourMT3_Interactive_Test.ipynb
+!Stems_PoC_Test.ipynb
 
 # IDEs
 .vscode/
