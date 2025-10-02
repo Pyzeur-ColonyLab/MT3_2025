@@ -23,6 +23,7 @@ fi
 # Install dependencies
 echo ""
 echo "1. Installing Python dependencies..."
+pip install torch torchaudio --quiet
 pip install pytorch-lightning>=2.2.1 --quiet
 pip install transformers==4.45.1 --quiet
 pip install einops mido --quiet

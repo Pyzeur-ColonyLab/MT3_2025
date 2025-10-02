@@ -5,8 +5,9 @@ Test YourMT3 with The Shire audio
 import sys
 import os
 
-# Add YourMT3 src to path
-sys.path.append(os.path.abspath('yourmt3_space/amt/src'))
+# Add YourMT3 paths
+sys.path.insert(0, os.path.abspath('yourmt3_space'))
+sys.path.insert(0, os.path.abspath('yourmt3_space/amt/src'))
 
 import torch
 import torchaudio
