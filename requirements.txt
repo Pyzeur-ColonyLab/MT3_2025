@@ -1,22 +1,28 @@
-# MT3 PyTorch Implementation - Complete Dependencies
+# YourMT3 Dependencies
 
 # Core ML frameworks
-torch>=1.9.0
-numpy>=1.20.0
+torch>=2.0.0
+torchaudio>=2.0.0
+
+# Deep Learning
+pytorch-lightning>=2.2.1
+transformers==4.45.1
 
 # Audio processing
-librosa>=0.8.0
-soundfile>=0.10.0
+librosa>=0.10.0
 
-# MIDI and music processing
-note-seq>=0.0.5
+# MIDI
 pretty-midi>=0.2.9
-absl-py>=1.0.0
-t5>=0.9.0  # Required for MT3 vocabulary system
+mido>=1.3.0
 
 # Utilities
-tqdm>=4.50.0
-dataclasses>=0.6; python_version < '3.7'
+einops>=0.7.0
+deprecated>=1.2.0
 
-# Optional but recommended
-scikit-learn>=1.0.0  # For evaluation metrics
+# For Jupyter notebook
+ipywidgets>=8.0.0
+matplotlib>=3.5.0
+scipy>=1.9.0
+
+# Evaluation (from YourMT3)
+git+https://github.com/craffel/mir_eval.git
