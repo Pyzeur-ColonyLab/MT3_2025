@@ -25,34 +25,16 @@ cd ~/MT3_2025
 bash setup_jupyter.sh
 ```
 
-### 2. Start Jupyter
+### 2. Access Brev Jupyter Interface
 
-```bash
-# Start Jupyter server
-jupyter notebook --ip=0.0.0.0 --port=8888 --no-browser
-```
+Brev provides a built-in Jupyter interface:
 
-### 3. Access Notebook
+1. **Open Brev dashboard** in your browser
+2. **Click "Jupyter" tab** or navigate to your instance's Jupyter URL
+3. **Navigate to** `MT3_2025/` directory
+4. **Open** `YourMT3_Interactive_Test.ipynb`
 
-**Option A: Port Forwarding (Recommended)**
-```bash
-# On your local machine
-ssh -L 8888:localhost:8888 ubuntu@brev-yjlyl7zrb
-
-# Then open in browser:
-http://localhost:8888
-```
-
-**Option B: Direct Access**
-```
-# Copy the URL from Jupyter output
-# Replace 0.0.0.0 with your Brev instance IP
-http://<brev-ip>:8888/?token=<token>
-```
-
-### 4. Open Notebook
-
-Navigate to: `YourMT3_Interactive_Test.ipynb`
+> **Note**: No need to start Jupyter manually - Brev handles this automatically!
 
 ## 📖 How to Use
 
