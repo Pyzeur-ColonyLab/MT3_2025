@@ -49,6 +49,12 @@ python transcribe_audio.py --audio your_music.mp3
 
 Or use the Jupyter notebook: `Stems_PoC_Test_Fixed.ipynb`
 
+**Setup on new instance**:
+```bash
+bash setup_yourmt3_brev.sh
+bash setup_jupyter.sh  # Optional
+```
+
 ---
 
 ### ✅ 2. Stems-Based Transcription (PoC Validated)
@@ -89,7 +95,16 @@ Identify actual instruments from MIDI transcription using audio timbre analysis.
 
 📖 **Full Specification**: [instrument_recognition/SPECIFICATION.md](./instrument_recognition/SPECIFICATION.md)
 
-**Status**: Phase 0 (MIDI transcription) complete, Phase 1-4 in development
+**Setup on new instance**:
+```bash
+# Install instrument recognition dependencies
+pip install -r instrument_recognition/requirements.txt
+
+# Launch Jupyter
+jupyter notebook Instrument_Recognition_PoC.ipynb
+```
+
+**Status**: Phase 0 (MIDI transcription) complete, Phase 1-5 in development
 
 ---
 
