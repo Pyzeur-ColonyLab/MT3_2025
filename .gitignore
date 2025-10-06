@@ -43,6 +43,7 @@ venv_yourmt3/
 !YourMT3_Interactive_Test.ipynb
 !Stems_PoC_Test.ipynb
 !Stems_PoC_Test_Fixed.ipynb
+!Instrument_Recognition_PoC.ipynb
 
 # IDEs
 .vscode/
